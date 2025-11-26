@@ -132,6 +132,9 @@
     const latInput = document.getElementById('lat-input');
     const lonInput = document.getElementById('lon-input');
     const copyBtn = document.getElementById('copy-btn');
+    const runBtn = document.getElementById('run-btn');
+    const statusDiv = document.getElementById('status');
+
 
     let marker = null;
 
@@ -169,6 +172,45 @@
         // Fallback if clipboard API fails
         alert(`Could not copy automatically.\nCopy manually:\n${text}`);
       }
+    runBtn.addEventListener('click', async () => {
+    const lat = latInput.value;
+    const lon = lonInput.value;
+
+    if (!lat || !lon) {
+    alert('Click on the map first to pick a location.');
+    return;
+    }
+
+    statusDiv.textContent = 'Triggering GitHub workflow...';
+
+    try {
+        const resp = await fetch('http://127.0.0.1:8000/run-workflow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ lat, lon }),
+        });
+
+        let data = {};
+        try {
+        data = await resp.json();
+        } catch (e) {
+        // ignore parse error
+        }
+
+        if (resp.ok) {
+        statusDiv.textContent =
+            data.message || 'Workflow triggered! Check GitHub → Actions.';
+        } else {
+        statusDiv.textContent =
+            'Error from server: ' + (data.error || data.github_response || resp.statusText);
+        }
+    } catch (err) {
+        statusDiv.textContent = 'Network error: ' + err;
+    }
+});
+
     });
   </script>
 </body>
