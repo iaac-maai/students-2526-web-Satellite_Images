@@ -5,7 +5,7 @@
   <title>Pick coordinates for satellite image</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 
-  <!-- Mapbox GL JS CSS + JS (from CDN) -->
+  <!-- Mapbox GL JS CSS + JS -->
   <link
     href="https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.css"
     rel="stylesheet"
@@ -74,20 +74,28 @@
     #copy-btn {
       background: #0366d6;
       color: white;
+      margin-right: 6px;
     }
-    #copy-btn:active {
+    #copy-btn:active,
+    #run-btn:active {
       transform: translateY(1px);
     }
     #hint {
       font-size: 12px;
       color: #555;
     }
+    #status {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #333;
+      min-height: 1.2em;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
-    <div id="controls">
+  <div id="controls">
     <h1>Pick a location</h1>
     <div id="hint">
       1. Click on the map<br />
@@ -107,124 +115,107 @@
     </div>
 
     <button id="copy-btn" type="button">Copy "lat, lon"</button>
-    <button id="run-btn" type="button" style="margin-left: 6px;">
-      Get satellite image
-    </button>
+    <button id="run-btn" type="button">Get satellite image</button>
 
-    <div id="status" style="margin-top: 8px; font-size: 12px; color: #333;"></div>
+    <div id="status"></div>
   </div>
 
   <script>
-  // 1. Mapbox access token
-  mapboxgl.accessToken = 'YOUR_PUBLIC_MAPBOX_TOKEN_HERE';
+    // 1. Mapbox access token (PUBLIC token, from your Mapbox account)
+    mapboxgl.accessToken = 'YOUR_PUBLIC_MAPBOX_TOKEN_HERE';
 
-  console.log('Script loaded'); // DEBUG
+    // 2. Create the map
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/satellite-v9',
+      center: [0, 20],
+      zoom: 2
+    });
 
-  // 2. Create the map
-  const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/satellite-v9',
-    center: [0, 20],
-    zoom: 2
-  });
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-  map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // 3. Grab UI elements
+    const latInput = document.getElementById('lat-input');
+    const lonInput = document.getElementById('lon-input');
+    const copyBtn = document.getElementById('copy-btn');
+    const runBtn = document.getElementById('run-btn');
+    const statusDiv = document.getElementById('status');
 
-  // 3. Grab UI elements
-  const latInput = document.getElementById('lat-input');
-  const lonInput = document.getElementById('lon-input');
-  const copyBtn = document.getElementById('copy-btn');
-  const runBtn = document.getElementById('run-btn');
-  const statusDiv = document.getElementById('status');
+    let marker = null;
 
-  console.log('Elements:', { latInput, lonInput, copyBtn, runBtn, statusDiv });
+    function updateCoords(lngLat) {
+      const lat = lngLat.lat.toFixed(6);
+      const lon = lngLat.lng.toFixed(6);
 
-  let marker = null;
+      latInput.value = lat;
+      lonInput.value = lon;
 
-  function updateCoords(lngLat) {
-    const lat = lngLat.lat.toFixed(6);
-    const lon = lngLat.lng.toFixed(6);
-
-    latInput.value = lat;
-    lonInput.value = lon;
-
-    if (marker) {
-      marker.setLngLat(lngLat);
-    } else {
-      marker = new mapboxgl.Marker().setLngLat(lngLat).addTo(map);
-    }
-  }
-
-  // 4. Map click → update coords
-  map.on('click', (event) => {
-    console.log('Map clicked at', event.lngLat); // DEBUG
-    updateCoords(event.lngLat);
-  });
-
-  // 5. Copy button
-  copyBtn.addEventListener('click', async () => {
-    console.log('Copy button clicked'); // DEBUG
-    const lat = latInput.value;
-    const lon = lonInput.value;
-    if (!lat || !lon) {
-      alert('Click on the map first to pick a location.');
-      return;
-    }
-
-    const text = `${lat}, ${lon}`;
-    try {
-      await navigator.clipboard.writeText(text);
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => { copyBtn.textContent = 'Copy "lat, lon"'; }, 1500);
-    } catch (err) {
-      alert(`Could not copy automatically.\nCopy manually:\n${text}`);
-    }
-  });
-
-  // 6. Run workflow button
-  runBtn.addEventListener('click', async () => {
-    console.log('Run button clicked'); // DEBUG
-
-    const lat = latInput.value;
-    const lon = lonInput.value;
-
-    if (!lat || !lon) {
-      alert('Click on the map first to pick a location.');
-      return;
-    }
-
-    statusDiv.textContent = 'Triggering GitHub workflow...';
-
-    try {
-      const resp = await fetch('http://127.0.0.1:8000/run-workflow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ lat, lon }),
-      });
-
-      let data = {};
-      try {
-        data = await resp.json();
-      } catch (e) {
-        console.warn('Could not parse JSON response', e);
-      }
-
-      console.log('Response from backend:', resp.status, data); // DEBUG
-
-      if (resp.ok) {
-        statusDiv.textContent =
-          (data && data.message) || 'Workflow triggered! Check GitHub → Actions.';
+      if (marker) {
+        marker.setLngLat(lngLat);
       } else {
-        statusDiv.textContent =
-          'Error from server: ' + (data.error || data.github_response || resp.statusText);
+        marker = new mapboxgl.Marker().setLngLat(lngLat).addTo(map);
       }
-    } catch (err) {
-      console.error('Network error:', err);
-      statusDiv.textContent = 'Network error: ' + err;
     }
-  });
-</script>
+
+    // 4. Map click → update coords
+    map.on('click', (event) => {
+      updateCoords(event.lngLat);
+    });
+
+    // 5. Copy button
+    copyBtn.addEventListener('click', async () => {
+      const lat = latInput.value;
+      const lon = lonInput.value;
+      if (!lat || !lon) {
+        alert('Click on the map first to pick a location.');
+        return;
+      }
+
+      const text = `${lat}, ${lon}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy "lat, lon"'; }, 1500);
+      } catch (err) {
+        alert(`Could not copy automatically.\nCopy manually:\n${text}`);
+      }
+    });
+
+    // 6. Run workflow button
+    runBtn.addEventListener('click', async () => {
+      const lat = latInput.value;
+      const lon = lonInput.value;
+
+      if (!lat || !lon) {
+        alert('Click on the map first to pick a location.');
+        return;
+      }
+
+      statusDiv.textContent = 'Triggering GitHub workflow...';
+
+      try {
+        const resp = await fetch('http://127.0.0.1:8000/run-workflow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lat, lon }),
+        });
+
+        let data = {};
+        try {
+          data = await resp.json();
+        } catch (e) {}
+
+        if (resp.ok) {
+          statusDiv.textContent =
+            (data && data.message) || 'Workflow triggered! Check GitHub → Actions.';
+        } else {
+          statusDiv.textContent =
+            'Error from server: ' + (data.error || data.github_response || resp.statusText);
+        }
+      } catch (err) {
+        statusDiv.textContent = 'Network error: ' + err;
+      }
+    });
+  </script>
 </body>
 </html>
