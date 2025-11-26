@@ -6,7 +6,7 @@ import requests
 print(">>> fetch_tile.py is running")
 
 # Default configuration
-DEFAULT_ZOOM = 18
+DEFAULT_ZOOM = 16
 DEFAULT_WIDTH = 512
 DEFAULT_HEIGHT = 512
 DEFAULT_STYLE = "satellite-v9"  # Mapbox style id
