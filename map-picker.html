@@ -12,6 +12,13 @@
   />
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.js"></script>
 
+  <!-- Mapbox GL Geocoder CSS + JS -->
+    <link
+    rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v7.0.0/mapbox-gl-geocoder.css"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v7.0.0/mapbox-gl-geocoder.min.js"></script>
+
   <style>
     html, body {
       margin: 0;
@@ -127,12 +134,21 @@
     // 2. Create the map
     const map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/satellite-v9',
+      style: 'mapbox://styles/mapbox/satellite-streets-v12',
       center: [0, 20],
       zoom: 2
     });
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    // Add search bar (Mapbox Geocoder)
+    const geocoder = new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken,
+    mapboxgl: mapboxgl,
+    placeholder: 'Search for a place',
+    marker: false  // we’ll still use our own marker on click
+    });
+    map.addControl(geocoder, 'top-left');
 
     // 3. Grab UI elements
     const latInput = document.getElementById('lat-input');
