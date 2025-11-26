@@ -5,19 +5,19 @@
   <title>Pick coordinates for satellite image</title>
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 
-    <!-- Mapbox GL JS CSS + JS -->
-    <link
-    href="https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.css"
+  <!-- Mapbox GL JS v2 (stable) -->
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css"
     rel="stylesheet"
-    />
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.js"></script>
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
-    <!-- Mapbox Geocoder CSS + JS -->
-    <link
+  <!-- Mapbox Geocoder plugin compatible with v2 -->
+  <link
     rel="stylesheet"
-    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v7.1.2/mapbox-gl-geocoder.css"
-    />
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v7.1.2/mapbox-gl-geocoder.min.js"></script>
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.1.2/mapbox-gl-geocoder.css"
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.1.2/mapbox-gl-geocoder.min.js"></script>
 
   <style>
     html, body {
@@ -105,7 +105,7 @@
   <div id="controls">
     <h1>Pick a location</h1>
     <div id="hint">
-      1. Click on the map<br />
+      1. Use the search box or click on the map<br />
       2. (Optional) Copy the coordinates<br />
       3. Click "Get satellite image"
     </div>
@@ -128,10 +128,10 @@
   </div>
 
   <script>
-    // 1. Mapbox access token (PUBLIC token, from your Mapbox account)
+    // PUT YOUR PUBLIC MAPBOX TOKEN HERE (starts with "pk.")
     mapboxgl.accessToken = 'pk.eyJ1IjoicmFzaGktZCIsImEiOiJjbWlmcXh3bjAwMDVyM2RxeDhnemh0bTd3In0.Sf7hDPEoF09bsu2s1CSBAA';
 
-    // 2. Create the map
+    // Create the map with satellite + labels
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/satellite-streets-v12',
@@ -141,16 +141,15 @@
 
     map.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    // Add search bar (Mapbox Geocoder)
+    // Add search bar (geocoder)
     const geocoder = new MapboxGeocoder({
-        accessToken: mapboxgl.accessToken,
-        mapboxgl: mapboxgl,
-        placeholder: 'Search for a place',
-        marker: false  // we’ll still use our own marker on click
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      placeholder: 'Search for a place',
+      marker: false  // we use our own marker
     });
     map.addControl(geocoder, 'top-left');
 
-    // 3. Grab UI elements
     const latInput = document.getElementById('lat-input');
     const lonInput = document.getElementById('lon-input');
     const copyBtn = document.getElementById('copy-btn');
@@ -173,17 +172,24 @@
       }
     }
 
-    // 4. Map click → update coords
+    // Click on map → update coords + marker
     map.on('click', (event) => {
       updateCoords(event.lngLat);
     });
 
-    // 5. Copy button
+    // When a result is chosen in the geocoder → move map & update coords
+    geocoder.on('result', (e) => {
+      const center = e.result.center; // [lon, lat]
+      updateCoords({ lng: center[0], lat: center[1] });
+      map.flyTo({ center, zoom: 14 });
+    });
+
+    // Copy button
     copyBtn.addEventListener('click', async () => {
       const lat = latInput.value;
       const lon = lonInput.value;
       if (!lat || !lon) {
-        alert('Click on the map first to pick a location.');
+        alert('Pick a location first.');
         return;
       }
 
@@ -197,13 +203,13 @@
       }
     });
 
-    // 6. Run workflow button
+    // Trigger GitHub workflow
     runBtn.addEventListener('click', async () => {
       const lat = latInput.value;
       const lon = lonInput.value;
 
       if (!lat || !lon) {
-        alert('Click on the map first to pick a location.');
+        alert('Pick a location first.');
         return;
       }
 
@@ -217,9 +223,7 @@
         });
 
         let data = {};
-        try {
-          data = await resp.json();
-        } catch (e) {}
+        try { data = await resp.json(); } catch (e) {}
 
         if (resp.ok) {
           statusDiv.textContent =
