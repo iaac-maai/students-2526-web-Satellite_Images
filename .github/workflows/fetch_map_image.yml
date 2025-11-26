@@ -1,0 +1,51 @@
+name: Fetch Mapbox Satellite Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      lat:
+        description: "Latitude"
+        required: true
+        type: string
+      lon:
+        description: "Longitude"
+        required: true
+        type: string
+
+jobs:
+  fetch-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run fetch_tile.py
+        env:
+          MAPBOX_TOKEN: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          python fetch_tile.py \
+            --lat "${{ github.event.inputs.lat }}" \
+            --lon "${{ github.event.inputs.lon }}" \
+            --zoom 18 \
+            --width 512 \
+            --height 512 \
+            --style satellite-v9 \
+            --outdir output
+
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: satellite-image
+          path: output/*.png
+          
