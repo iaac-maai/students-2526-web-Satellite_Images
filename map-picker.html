@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pick coordinates for satellite image</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+
+  <!-- Mapbox GL JS CSS + JS (from CDN) -->
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.css"
+    rel="stylesheet"
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.17.0-beta.1/mapbox-gl.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px 12px;
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      max-width: 280px;
+      font-size: 14px;
+    }
+    #controls h1 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+    #coords-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 8px 0;
+    }
+    .coord-field {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .coord-field label {
+      width: 35px;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .coord-field input {
+      flex: 1;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 13px;
+    }
+    button {
+      cursor: pointer;
+      border-radius: 4px;
+      border: none;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+    #copy-btn {
+      background: #0366d6;
+      color: white;
+    }
+    #copy-btn:active {
+      transform: translateY(1px);
+    }
+    #hint {
+      font-size: 12px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="controls">
+    <h1>Pick a location</h1>
+    <div id="hint">
+      1. Click on the map<br />
+      2. Copy the coordinates<br />
+      3. Paste them into the GitHub Action inputs
+    </div>
+
+    <div id="coords-row">
+      <div class="coord-field">
+        <label for="lat-input">Lat</label>
+        <input id="lat-input" type="text" readonly />
+      </div>
+      <div class="coord-field">
+        <label for="lon-input">Lon</label>
+        <input id="lon-input" type="text" readonly />
+      </div>
+    </div>
+
+    <button id="copy-btn" type="button">Copy "lat, lon"</button>
+  </div>
+
+  <script>
+    // TODO: replace with your *public* Mapbox token
+    // Get it from https://account.mapbox.com → Access tokens (default public token is fine)
+    mapboxgl.accessToken = 'pk.eyJ1IjoicmFzaGktZCIsImEiOiJjbWlmcXh3bjAwMDVyM2RxeDhnemh0bTd3In0.Sf7hDPEoF09bsu2s1CSBAA';
+
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/satellite-v9', // satellite background
+      center: [0, 20], // starting center [lon, lat]
+      zoom: 2
+    });
+
+    // Add basic zoom controls
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    const latInput = document.getElementById('lat-input');
+    const lonInput = document.getElementById('lon-input');
+    const copyBtn = document.getElementById('copy-btn');
+
+    let marker = null;
+
+    function updateCoords(lngLat) {
+      const lat = lngLat.lat.toFixed(6);
+      const lon = lngLat.lng.toFixed(6);
+
+      latInput.value = lat;
+      lonInput.value = lon;
+
+      if (marker) {
+        marker.setLngLat(lngLat);
+      } else {
+        marker = new mapboxgl.Marker().setLngLat(lngLat).addTo(map);
+      }
+    }
+
+    // When the user clicks the map, move the marker and update the fields
+    map.on('click', (event) => {
+      updateCoords(event.lngLat);
+    });
+
+    // Copy "lat, lon" to clipboard when button is clicked
+    copyBtn.addEventListener('click', async () => {
+      const lat = latInput.value;
+      const lon = lonInput.value;
+      if (!lat || !lon) return;
+
+      const text = `${lat}, ${lon}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy "lat, lon"'; }, 1500);
+      } catch (err) {
+        // Fallback if clipboard API fails
+        alert(`Could not copy automatically.\nCopy manually:\n${text}`);
+      }
+    });
+  </script>
+</body>
+</html>
