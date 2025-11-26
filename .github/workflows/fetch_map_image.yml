@@ -20,6 +20,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      - name: Clean output folder
+        run: rm -rf output
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -37,7 +40,7 @@ jobs:
           python fetch_tile.py \
             --lat "${{ github.event.inputs.lat }}" \
             --lon "${{ github.event.inputs.lon }}" \
-            --zoom 18 \
+            --zoom 16 \
             --width 512 \
             --height 512 \
             --style satellite-v9 \
