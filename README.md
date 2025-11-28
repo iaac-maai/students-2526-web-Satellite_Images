@@ -25,6 +25,7 @@ This tool is ideal for:
 ```bash
 git clone https://github.com/your-username/your-repository.git
 cd your-repository
+```
 
 ## Running the Map Interface (Using Live Server)
 
